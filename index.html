@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lista de Compras</title>
+</head>
+<body>
+    <h1>Minha Lista de Compras</h1>
+    <input type="text" id="novoItem" placeholder="Digite um item">
+    <button id="adicionarBtn">Adicionar</button>
+    <h2>Itens:</h2>
+    <ul id="listaCompras"></ul>
+
+    <script>
+        const obterItens = () => fetch('/itens').then(res => res.json());
+        
+        const adicionarItem = (nome) => fetch('/itens', { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ nome, comprado: false }) 
+        });
+        
+        const atualizarItem = (index, nome, comprado) => fetch(`/itens/${index}`, { 
+            method: 'PUT', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ nome, comprado }) 
+        });
+        
+        const removerItem = async (index) => {
+            try {
+                const response = await fetch(`/itens/${index}`, { method: 'DELETE' });
+                if (response.ok) {
+                    renderizarLista(await obterItens());
+                } else {
+                    console.error('Erro ao remover item');
+                }
+            } catch (error) {
+                console.error('Erro na requisição de remoção:', error);
+            }
+        };
+
+        function renderizarLista(itens) {
+            const listaComprasUl = document.getElementById('listaCompras');
+            listaComprasUl.innerHTML = itens.map((item, index) => `
+                <li>
+                    ${item.nome} ${item.comprado ? '(Comprado)' : ''}
+                    <button onclick="atualizarStatus(${index}, '${item.nome}', ${!item.comprado})">
+                        ${item.comprado ? 'Desmarcar' : 'Marcar como Comprado'}
+                    </button>
+                    <button onclick="removerItem(${index})">Remover</button>
+                </li>
+            `).join('');
+        }
+
+        const atualizarStatus = async (index, nome, comprado) => {
+            try {
+                await atualizarItem(index, nome, comprado);
+                renderizarLista(await obterItens());
+            } catch (error) {
+                console.error(error);
+            }
+        };
+
+        document.getElementById('adicionarBtn').addEventListener('click', async () => {
+            const novoItemInput = document.getElementById('novoItem');
+            const novoItem = novoItemInput.value.trim(); 
+            if (novoItem) {
+                try {
+                    await adicionarItem(novoItem);
+                    renderizarLista(await obterItens());
+                    novoItemInput.value = ''; 
+                } catch (error) {
+                    console.error(error);
+                }
+            }
+        });
+
+        window.onload = async () => {
+            try {
+                renderizarLista(await obterItens());
+            } catch (error) {
+                console.error(error);
+            }
+        };
+    </script>
+</body>
+</html>
